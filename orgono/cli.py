@@ -107,15 +107,22 @@ def cmd_map(args) -> int:
 
 
 def cmd_view(args) -> int:
-    from .app.core.viz import serve
+    from .app.core.viz import make_answerer, serve
 
     log = _make_logger(args)
-    cart = Cartographer.create(args.path, _config_from_args(args), log)
+    cfg = _config_from_args(args)
+    cart = Cartographer.create(args.path, cfg, log)
     graph = cart.ensure_graph()
     r, d, b, c, y, red, g = _color(_use_color(args))
-    httpd, url = serve(graph, host=args.host, port=args.port, log=log, block=False)
+    answerer = None if args.no_assistant else make_answerer(graph, cart.root, cfg, log)
+    httpd, url = serve(graph, host=args.host, port=args.port, log=log, block=False,
+                       answerer=answerer)
     print(f"{b}{c}orgono{r} 3D map -> {b}{url}{r}")
     print(f"  {d}{len(graph.nodes)} nodes, {len(graph.edges)} edges. Ctrl-C to stop.{r}")
+    if answerer:
+        print(f"  {d}assistant: on (local only - answers never leave this machine){r}")
+    else:
+        print(f"  {y}assistant: off{r}")
     if not args.no_browser:
         with contextlib.suppress(Exception):
             webbrowser.open(url)
@@ -510,6 +517,8 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--port", type=int, default=7373)
     v.add_argument("--host", default="127.0.0.1", help="bind address (default: loopback only)")
     v.add_argument("--no-browser", action="store_true")
+    v.add_argument("--no-assistant", action="store_true",
+                   help="serve the map read-only, with no question endpoint")
     v.set_defaults(func=cmd_view)
 
     f = common(sub.add_parser("find", help="find symbols by name/kind/language"))

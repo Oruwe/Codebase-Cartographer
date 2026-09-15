@@ -101,6 +101,34 @@ no network.
 - Drag to orbit, right-drag to pan, scroll to zoom, `/` to search, `f` to frame,
   `esc` to clear.
 
+### The assistant lives inside the map
+
+The chat panel is not a separate tool bolted on: **an answer selects the nodes it
+cites**, so asking a question moves the camera and lights up the subgraph the
+answer is about. Citations are clickable and focus the node.
+
+Ask *"how does extract_repo connect to redact_text?"* and you get the call chain
+with `path:line` for every hop, the relevant subgraph highlighted in 3D, and a
+count of any secrets that were redacted from the snippets.
+
+It answers **locally, from the graph** — no model, no network, whatever your
+egress settings say. `orgono view --no-assistant` serves the map read-only.
+
+**Why this endpoint is locked down:** a server on localhost that answers
+questions about your code is reachable by every page your browser loads. Four
+things prevent a drive-by from reading your code map, each verified by a test
+that tries to get past it:
+
+| control | behaviour |
+|---|---|
+| per-run bearer token | fresh 43-char token each run, injected into the page, never in a URL |
+| Origin/Host check | a request from any other site is refused with `403`, even with a valid token |
+| body-size cap | over 8 KB is refused with `413` |
+| rate limit | 60 requests/minute |
+
+Responses use the same `QueryCaps` as the CLI, so an authorised caller still
+cannot sweep the graph.
+
 ## Asking questions
 
 `orgono ask` retrieves deterministically from the graph, then optionally hands
@@ -351,7 +379,7 @@ rules against the refusal paths.
 
 ```bash
 pip install -e ".[dev]"
-pytest -q          # 319 tests
+pytest -q          # 334 tests
 ruff check .
 python tools/probe_grammars.py --captures   # re-verify grammar node names
 ```

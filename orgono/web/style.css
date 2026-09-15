@@ -74,3 +74,38 @@ kbd{background:rgba(255,255,255,.1);border:1px solid var(--line);border-radius:4
   #hud{width:auto;left:10px;right:10px;max-height:46vh}
   .legend{display:none} .help{display:none}
 }
+
+/* ---------- assistant ---------- */
+#assistant{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));
+  width:330px;max-height:56vh;display:flex;flex-direction:column;padding:12px;z-index:12}
+#assistant header{display:flex;flex-direction:column;gap:2px;margin-bottom:8px;
+  padding-bottom:8px;border-bottom:1px solid var(--line)}
+#assistant h2{font-size:10px;margin:0;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);font-weight:600}
+.transcript{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:9px;
+  padding-right:4px;min-height:60px}
+.msg{font-size:12px;line-height:1.5;border-radius:9px;padding:7px 10px;max-width:100%}
+.msg p{margin:0 0 5px} .msg p:last-child{margin:0}
+.msg.you{background:rgba(90,209,255,.14);border:1px solid rgba(90,209,255,.3);align-self:flex-end}
+.msg.bot{background:rgba(255,255,255,.05);border:1px solid var(--line)}
+.msg.err{background:rgba(255,83,112,.12);border:1px solid rgba(255,83,112,.35)}
+.msg pre{margin:5px 0 0;font-size:10.5px;line-height:1.45;white-space:pre-wrap;
+  word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+.msg .cite{display:inline-block;margin:3px 4px 0 0;padding:1px 6px;border-radius:5px;
+  background:rgba(90,209,255,.16);border:1px solid rgba(90,209,255,.3);
+  font-size:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  cursor:pointer;color:var(--fg)}
+.msg .cite:hover{background:var(--accent);color:#04121a}
+#ask-form{display:flex;gap:6px;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}
+#ask-input{flex:1;min-width:0;padding:7px 9px;border-radius:8px;border:1px solid var(--line);
+  background:rgba(0,0,0,.34);color:var(--fg);font-size:12px;font-family:inherit}
+#ask-input:focus{outline:none;border-color:var(--accent)}
+#ask-send{padding:7px 12px;border-radius:8px;border:1px solid var(--line);
+  background:rgba(255,255,255,.06);color:var(--fg);font-size:11px;cursor:pointer;font-family:inherit}
+#ask-send:hover{background:var(--accent);color:#04121a;border-color:var(--accent)}
+#ask-send[disabled]{opacity:.5;cursor:default}
+.thinking::after{content:"";animation:dots 1.2s steps(4,end) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+@media (max-width:760px){
+  #assistant{width:auto;left:10px;right:10px;max-height:40vh}
+}

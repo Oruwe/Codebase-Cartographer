@@ -683,7 +683,7 @@
     });
 
     document.addEventListener("keydown", function (e) {
-      if (e.target.tagName === "INPUT") {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
         if (e.key === "Escape") { e.target.blur(); results.hidden = true; }
         return;
       }
@@ -692,6 +692,138 @@
       if (e.key === "f") { if (state.focus) setFocus(state.focus); else frameAll(); }
       if (e.key === " ") { e.preventDefault(); document.getElementById("pause").click(); }
     });
+  }
+
+
+  /* ---------- assistant ----------
+   * The chat is not a separate surface bolted onto the map: an answer selects
+   * the nodes it cites, so asking a question moves the camera and lights up the
+   * subgraph the answer is about. Retrieval happens server-side over the same
+   * capped query engine the CLI uses; no model is involved and nothing leaves
+   * the machine.
+   */
+  function initAssistant() {
+    var form = document.getElementById("ask-form");
+    var input = document.getElementById("ask-input");
+    var send = document.getElementById("ask-send");
+    var transcript = document.getElementById("transcript");
+    if (!form) return;
+
+    function bubble(cls, build) {
+      var el = document.createElement("div");
+      el.className = "msg " + cls;
+      build(el);
+      transcript.appendChild(el);
+      transcript.scrollTop = transcript.scrollHeight;
+      return el;
+    }
+
+    function say(cls, text) {
+      return bubble(cls, function (el) {
+        var p = document.createElement("p");
+        p.textContent = text;
+        el.appendChild(p);
+      });
+    }
+
+    function renderAnswer(data) {
+      bubble("bot", function (el) {
+        var pre = document.createElement("pre");
+        pre.textContent = data.answer || "(no answer)";
+        el.appendChild(pre);
+
+        if (data.redactions > 0) {
+          var note = document.createElement("p");
+          note.className = "small muted";
+          note.textContent = data.redactions + " secret(s) redacted from the snippets above.";
+          el.appendChild(note);
+        }
+
+        var ids = (data.nodes || []).filter(function (id) { return state.byId[id]; });
+        if (ids.length) {
+          var row = document.createElement("p");
+          row.className = "small muted";
+          row.textContent = "highlighted " + ids.length + " node(s) — click to focus:";
+          el.appendChild(row);
+
+          var shown = ids.slice(0, 8);
+          shown.forEach(function (id) {
+            var n = state.byId[id];
+            var chip = document.createElement("span");
+            chip.className = "cite";
+            chip.textContent = n.name;
+            chip.title = n.path ? n.path + ":" + n.start_line : n.kind;
+            chip.addEventListener("click", function () { setFocus(id); });
+            el.appendChild(chip);
+          });
+          highlightSet(ids);
+        }
+      });
+    }
+
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var question = input.value.trim();
+      if (!question) return;
+      say("you", question);
+      input.value = "";
+      send.disabled = true;
+      var pending = say("bot", "thinking");
+      pending.classList.add("thinking");
+
+      fetch("api/ask", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + (window.__ORGONO_TOKEN || "")
+        },
+        body: JSON.stringify({ question: question, depth: state.depth })
+      })
+        .then(function (r) {
+          return r.json().then(function (body) {
+            if (!r.ok) throw new Error(body.error || ("HTTP " + r.status));
+            return body;
+          });
+        })
+        .then(function (data) {
+          pending.remove();
+          renderAnswer(data);
+        })
+        .catch(function (err) {
+          pending.remove();
+          say("err", err.message);
+        })
+        .then(function () {
+          send.disabled = false;
+          input.focus();
+        });
+    });
+  }
+
+  /* Light up an arbitrary set of nodes and frame them, without changing
+   * the single-node focus the user may already have chosen. */
+  function highlightSet(ids) {
+    var set = {};
+    for (var i = 0; i < ids.length; i++) set[ids[i]] = true;
+    state.focus = null;
+    state.inFocus = set;
+    var cx = 0, cy = 0, cz = 0, m = 0, n;
+    for (i = 0; i < state.nodes.length; i++) {
+      n = state.nodes[i];
+      if (set[n.id]) { cx += n.x; cy += n.y; cz += n.z; m++; }
+    }
+    if (!m) return;
+    cx /= m; cy /= m; cz /= m;
+    var rad = 1;
+    for (i = 0; i < state.nodes.length; i++) {
+      n = state.nodes[i];
+      if (set[n.id]) rad = Math.max(rad, Math.hypot(n.x - cx, n.y - cy, n.z - cz) + nodeRadius(n));
+    }
+    var fov = camera.fov * Math.PI / 180;
+    cam.tTarget.set(cx, cy, cz);
+    cam.tRadius = Math.min(20000, (rad * 1.35) / Math.tan(fov / 2) + 40);
+    var info = document.getElementById("focus-info");
+    if (info) info.textContent = m + " node(s) highlighted by the assistant";
   }
 
   /* ---------- boot ---------- */
@@ -743,6 +875,7 @@
     initLabels();
     buildUI(data);
     initControls(renderer.domElement);
+    initAssistant();
     document.getElementById("loading").hidden = true;
     animate();
   }

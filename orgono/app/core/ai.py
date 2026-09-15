@@ -103,20 +103,26 @@ def extract_terms(question: str, graph: Graph, limit: int = 6) -> list[str]:
     for name in names:
         lowered.setdefault(name.lower(), []).append(name)
 
-    found: list[str] = []
+    # Terms are gathered in two tiers. A word that is an exact graph symbol but
+    # is ALSO ordinary English (`connect`, `file`, `format`, `get`) is held back:
+    # in "how does X connect to Y" the user means the English word, and binding
+    # it pulls an unrelated function into the answer. Such a word is only used
+    # when nothing more specific matched.
+    strong: list[str] = []
+    weak: list[str] = []
     for raw in _TOKEN_RE.findall(question):
-        # An exact graph symbol always wins over the stopword list: `connect`,
-        # `file` and `format` are ordinary English words *and* real functions.
-        # (Found by running it -- the stopword list was silently hiding them.)
         if raw in names:
-            if raw not in found:
-                found.append(raw)
+            bucket = weak if raw.lower() in _STOPWORDS else strong
+            if raw not in bucket:
+                bucket.append(raw)
             continue
         if raw.lower() in _STOPWORDS:
             continue
         for candidate in sorted(lowered.get(raw.lower(), [])):
-            if candidate not in found:
-                found.append(candidate)
+            if candidate not in strong:
+                strong.append(candidate)
+
+    found = strong if strong else weak
     found.sort(key=lambda s: (-len(s), s))
     return found[:limit]
 

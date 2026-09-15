@@ -67,6 +67,24 @@
   </footer>
 </div>
 
+<div id="assistant" class="panel">
+  <header>
+    <h2>Assistant</h2>
+    <span id="assist-mode" class="small muted">local · nothing leaves this machine</span>
+  </header>
+  <div id="transcript" class="transcript">
+    <div class="msg bot">
+      <p>Ask about this codebase. I answer from the graph, and highlight what I cite.</p>
+      <p class="small muted">Try: <em>what calls extract_repo?</em> · <em>how does X connect to Y?</em></p>
+    </div>
+  </div>
+  <form id="ask-form" autocomplete="off">
+    <input id="ask-input" type="text" placeholder="Ask about a function, file or connection…"
+           maxlength="500" aria-label="Ask about this codebase">
+    <button id="ask-send" type="submit" aria-label="Send">Ask</button>
+  </form>
+</div>
+
 <div id="tooltip" class="tooltip" hidden></div>
 <div id="legend" class="legend panel"></div>
 <div id="loading" class="loading">building the map…</div>
@@ -74,6 +92,7 @@
   drag orbit · right-drag pan · scroll zoom · click focus · <kbd>f</kbd> frame · <kbd>esc</kbd> clear
 </div>
 
+<script>window.__ORGONO_TOKEN = "__ORGONO_TOKEN__";</script>
 <script src="vendor/three.min.js"></script>
 <script src="app.js"></script>
 </body>

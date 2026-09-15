@@ -23,7 +23,13 @@ def engine(golden_graph, golden_dir, silent_log):
 def test_terms_are_only_symbols_that_exist(golden_graph):
     terms = extract_terms("how does query_users reach connect?", golden_graph)
     assert "query_users" in terms
-    assert "connect" in terms
+    # `connect` is deliberately NOT bound here. It is both a real function and an
+    # ordinary English word, and this question already names a specific symbol.
+    # The trade-off is chosen on consequences: binding it pulled ~85 unrelated
+    # nodes and wrong citations into the answer, while dropping it loses one
+    # symbol and leaves the answer intact. See the two tests below for both
+    # halves of the rule.
+    assert "connect" not in terms
 
 
 def test_stopwords_and_unknown_words_are_ignored(golden_graph):
@@ -117,3 +123,17 @@ def test_free_filter_and_formatting():
 
 def test_models_url_is_built_from_base_url():
     assert models_url("https://openrouter.ai/api/v1/") == "https://openrouter.ai/api/v1/models"
+
+
+def test_ordinary_english_words_do_not_hijack_a_question(golden_graph):
+    """Regression: `connect` is both an English word and a function in the
+    fixture, so "how does X connect to Y" bound the function and pulled an
+    unrelated subgraph into the answer."""
+    terms = extract_terms("how does get_user_route connect to query_users?", golden_graph)
+    assert "connect" not in terms
+    assert {"get_user_route", "query_users"} <= set(terms)
+
+
+def test_an_english_word_is_still_used_when_it_is_all_you_asked_about(golden_graph):
+    terms = extract_terms("what calls connect?", golden_graph)
+    assert terms == ["connect"]
