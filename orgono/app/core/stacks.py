@@ -13,7 +13,14 @@ import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-import tomllib
+# tomllib landed in Python 3.11; orgono supports 3.10, where the third-party
+# `tomli` provides the same API. Without this, importing this module raises
+# ModuleNotFoundError on every 3.10 install -- which a 3.11 dev environment can
+# never reproduce, and CI caught on Linux, macOS and Windows alike.
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - exercised on Python 3.10 in CI
+    import tomli as tomllib
 
 MAX_MANIFEST_BYTES = 512_000
 

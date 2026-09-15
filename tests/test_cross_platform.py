@@ -164,3 +164,45 @@ def test_os_name_is_not_hardcoded_anywhere_in_the_package():
             if marker in body:
                 offenders.append(f"{py.name}: {marker}")
     assert not offenders, f"platform-specific branching found: {offenders}"
+
+
+def test_stacks_imports_without_tomllib(monkeypatch):
+    """Regression: `tomllib` is stdlib only from Python 3.11, but orgono declares
+    requires-python >=3.10. Importing the stacks module raised
+    ModuleNotFoundError on every 3.10 install -- on Linux, macOS and Windows --
+    and a 3.11 development environment can never reproduce it. CI caught it."""
+    import importlib
+    import sys
+
+    class BlockTomllib:
+        def find_spec(self, name, path=None, target=None):
+            if name == "tomllib":
+                raise ModuleNotFoundError("No module named 'tomllib'")
+            return None
+
+    monkeypatch.setattr(sys, "meta_path", [BlockTomllib(), *sys.meta_path])
+    sys.modules.pop("tomllib", None)
+    sys.modules.pop("orgono.app.core.stacks", None)
+    try:
+        module = importlib.import_module("orgono.app.core.stacks")
+        assert module.tomllib is not None
+        assert module._deps_from_pyproject('[project]\ndependencies = ["django"]\n') == ["django"]
+    finally:
+        sys.modules.pop("orgono.app.core.stacks", None)
+        importlib.import_module("orgono.app.core.stacks")
+
+
+def test_requires_python_floor_matches_what_the_code_needs():
+    """If the package ever needs a 3.11-only stdlib module unconditionally, the
+    declared floor must move with it."""
+    import pathlib
+
+    import orgono
+    pyproject = pathlib.Path(orgono.__file__).resolve().parents[1] / "pyproject.toml"
+    if not pyproject.is_file():
+        return
+    body = pyproject.read_text(encoding="utf-8")
+    assert 'requires-python = ">=3.10"' in body
+    assert 'tomli>=2.0; python_version < "3.11"' in body, (
+        "3.10 support requires the tomli fallback to be declared"
+    )
