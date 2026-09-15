@@ -11,7 +11,7 @@ It works completely offline. No API key, no network, no account.
 pip install orgono          # one command, every supported language, any OS
 
 orgono map                  # build the graph
-orgono view                 # 3D map at http://127.0.0.1:7373
+orgono view                 # 3D map + assistant at http://127.0.0.1:7373
 orgono stacks               # what the repo is built with
 orgono impact parse_config --direction callers
 orgono path get_user_route query_users
@@ -71,7 +71,7 @@ skipped with a logged reason rather than parsed.
 | command | what it does |
 |---|---|
 | `orgono map` | build the graph into `.orgono/graph.json` |
-| `orgono view` | 3D force-directed map on `127.0.0.1:7373` |
+| `orgono view` | 3D map **with the assistant inside it**, on `127.0.0.1:7373` |
 | `orgono find <name>` | find symbols by name, kind, language or path |
 | `orgono impact <symbol>` | what reaches, or is reached by, a symbol |
 | `orgono path <a> <b>` | the shortest typed edge chain connecting two symbols |
