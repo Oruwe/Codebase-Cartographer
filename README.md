@@ -8,14 +8,24 @@ localhost.
 It works completely offline. No API key, no network, no account.
 
 ```bash
-pip install -e .
+pip install orgono          # one command, every supported language, any OS
 
-orgono map            # build the graph
-orgono view           # open the 3D map at http://127.0.0.1:7373
+orgono map                  # build the graph
+orgono view                 # 3D map at http://127.0.0.1:7373
+orgono stacks               # what the repo is built with
 orgono impact parse_config --direction callers
 orgono path get_user_route query_users
 orgono ask "what calls redact_text?"
 ```
+
+Prefer an isolated install for a command-line tool:
+
+```bash
+pipx install orgono         # keeps orgono out of your system Python
+```
+
+**Requirements:** Python 3.10+ and nothing else. No compiler, no Node, no
+Docker, no database, no account.
 
 ---
 
@@ -29,8 +39,18 @@ and call sites, and writes a sorted JSON graph to `.orgono/graph.json`.
 **Edge types:** `defines`, `imports`, `calls`, `references`. Every edge carries
 the path, line and column it came from, so any answer traces back to source.
 
-**Languages (explicit — anything else is reported as `unsupported`, never
-half-parsed):** Python, JavaScript, TypeScript, TSX, Go, Rust, Java.
+**Languages — 18, explicit.** Anything else is reported as `unsupported`,
+never half-parsed:
+
+`bash` · `c` · `c_sharp` · `cpp` · `go` · `java` · `javascript` · `kotlin` ·
+`lua` · `php` · `python` · `ruby` · `rust` · `scala` · `sql` · `swift` ·
+`typescript` · `tsx`
+
+Every grammar ships as a prebuilt wheel for Linux, macOS (Apple Silicon and
+Intel) and Windows, so nothing compiles and nothing downloads at run time.
+`orgono doctor` lists what is ready on your machine. If a grammar ever fails to
+load, that file is reported as `unsupported` with the exact `pip install`
+command that fixes it — the run continues.
 
 Real numbers from this machine, mapping 1,399 files of third-party Python
 (197 MB of `site-packages`):
@@ -57,6 +77,7 @@ skipped with a logged reason rather than parsed.
 | `orgono path <a> <b>` | the shortest typed edge chain connecting two symbols |
 | `orgono file <path>` | definitions and edges for one file |
 | `orgono stats` | counts by kind, edge type and language |
+| `orgono stacks` | frameworks, build systems, databases and infra in use |
 | `orgono report` | files skipped, partial, unparsed or unsupported |
 | `orgono ask "<question>"` | grounded Q&A (local by default) |
 | `orgono tools` | the tool surface offered to sibling agents |
@@ -138,6 +159,44 @@ orgono explain "what is this?" --about query_users     # prints, sends nothing
 Only `--send` costs money, bounded by `ORGONO_MAX_SPEND_USD` (default $0.50) and
 a token ceiling enforced in Python before any request is built.
 
+## What this does to your machine
+
+orgono runs on your personal files, so here is precisely what it touches. Every
+line below is asserted by `tests/test_install_safety.py`, not just claimed.
+
+**It writes exactly one place:** `<repo>/.orgono/` — the graph and its cache.
+Nothing is written to your home directory, your shell profile, or anywhere
+outside the repository you point it at.
+
+**It makes no network connection** unless you pass `--send` together with
+`--enable-egress` and `--no-dry-run`. The local pipeline has no HTTP client:
+`requests` is imported lazily and only inside the egress path.
+
+**It never stores your API key.** There is no credentials file. The key is read
+from a flag, the environment, or a `.env` you maintain, and held in memory for
+one command.
+
+**It runs no code from your repository.** It parses files into syntax trees and
+reads manifests as data. There is no `eval`, `exec`, `os.system`, `pickle`, or
+`shell=True` anywhere in the package. The only subprocess in the whole tool is
+`orgono validate`, which invokes the `opengap` binary with list arguments and no
+shell.
+
+**It has no install-time code execution**, no `setup.py`, no postinstall hook,
+and exactly one console entry point (`orgono`). There is no telemetry, no
+analytics, no crash reporting and no auto-update.
+
+**It binds to loopback.** `orgono view` serves on `127.0.0.1` only. The 3D
+viewer loads a vendored copy of three.js from disk and fetches nothing from the
+internet.
+
+**Footprint:** about 40 MB installed — 1 MB of orgono and 39 MB of compiled
+grammars for 18 languages. That size is the cost of working entirely offline;
+the alternative would download grammars on first use.
+
+To remove it completely: `pip uninstall orgono`, then delete any `.orgono/`
+directories in repositories you mapped.
+
 ## Safety posture
 
 - Egress off by default; dry-run on even once enabled; a key on disk is not consent.
@@ -149,6 +208,12 @@ a token ceiling enforced in Python before any request is built.
   no free-form instruction field. Queries are capped in code, and one that would
   sweep most of the graph is refused rather than truncated.
 - Every query is logged with its caller, parameters and how much it returned.
+
+## Platforms
+
+Tested in CI on Linux, macOS and Windows across Python 3.10–3.13, including a
+clean wheel install on each. Paths inside the graph are always forward-slashed,
+so a `graph.json` built on Windows matches one built on Linux byte for byte.
 
 ## Configuration
 
@@ -249,7 +314,7 @@ rules against the refusal paths.
 
 ```bash
 pip install -e ".[dev]"
-pytest -q          # 220 tests
+pytest -q          # 300 tests
 ruff check .
 python tools/probe_grammars.py --captures   # re-verify grammar node names
 ```

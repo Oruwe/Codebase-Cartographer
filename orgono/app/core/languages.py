@@ -115,6 +115,104 @@ _JAVA_Q = """
 (enum_declaration name: (identifier) @def.name) @def.class
 """
 
+_C_Q = """
+(function_definition declarator: (function_declarator declarator: (identifier) @def.name)) @def.function
+(struct_specifier name: (type_identifier) @def.name) @def.class
+(enum_specifier name: (type_identifier) @def.name) @def.class
+(type_definition declarator: (type_identifier) @def.name) @def.class
+(call_expression function: (identifier) @call.name) @call.node
+(preproc_include path: (system_lib_string) @import.name) @import.node
+(preproc_include path: (string_literal) @import.name) @import.node
+"""
+
+_CPP_Q = """
+(function_definition declarator: (function_declarator declarator: (identifier) @def.name)) @def.function
+(function_definition declarator: (function_declarator declarator: (field_identifier) @def.name)) @def.method
+(class_specifier name: (type_identifier) @def.name) @def.class
+(struct_specifier name: (type_identifier) @def.name) @def.class
+(namespace_definition name: (namespace_identifier) @def.name) @def.class
+(call_expression function: (identifier) @call.name) @call.node
+(call_expression function: (field_expression field: (field_identifier) @call.name)) @call.node
+(preproc_include path: (system_lib_string) @import.name) @import.node
+(preproc_include path: (string_literal) @import.name) @import.node
+"""
+
+_CSHARP_Q = """
+(class_declaration name: (identifier) @def.name) @def.class
+(interface_declaration name: (identifier) @def.name) @def.interface
+(struct_declaration name: (identifier) @def.name) @def.class
+(enum_declaration name: (identifier) @def.name) @def.class
+(record_declaration name: (identifier) @def.name) @def.class
+(method_declaration name: (identifier) @def.name) @def.method
+(invocation_expression function: (identifier) @call.name) @call.node
+(invocation_expression function: (member_access_expression name: (identifier) @call.name)) @call.node
+(using_directive (identifier) @import.name) @import.node
+(using_directive (qualified_name) @import.name) @import.node
+"""
+
+_RUBY_Q = """
+(class name: (constant) @def.name) @def.class
+(module name: (constant) @def.name) @def.class
+(method name: (identifier) @def.name) @def.function
+(singleton_method name: (identifier) @def.name) @def.method
+(call method: (identifier) @call.name) @call.node
+"""
+
+_PHP_Q = """
+(class_declaration name: (name) @def.name) @def.class
+(interface_declaration name: (name) @def.name) @def.interface
+(trait_declaration name: (name) @def.name) @def.class
+(function_definition name: (name) @def.name) @def.function
+(method_declaration name: (name) @def.name) @def.method
+(function_call_expression function: (name) @call.name) @call.node
+(member_call_expression name: (name) @call.name) @call.node
+(namespace_use_clause (qualified_name) @import.name) @import.node
+"""
+
+_BASH_Q = """
+(function_definition name: (word) @def.name) @def.function
+(command name: (command_name) @call.name) @call.node
+"""
+
+_KOTLIN_Q = """
+(class_declaration (identifier) @def.name) @def.class
+(function_declaration (identifier) @def.name) @def.function
+(call_expression (identifier) @call.name) @call.node
+(import (qualified_identifier) @import.name) @import.node
+"""
+
+_SWIFT_Q = """
+(class_declaration name: (type_identifier) @def.name) @def.class
+(protocol_declaration name: (type_identifier) @def.name) @def.interface
+(function_declaration name: (simple_identifier) @def.name) @def.function
+(call_expression (simple_identifier) @call.name) @call.node
+(import_declaration (identifier) @import.name) @import.node
+"""
+
+_SCALA_Q = """
+(class_definition name: (identifier) @def.name) @def.class
+(object_definition name: (identifier) @def.name) @def.class
+(trait_definition name: (identifier) @def.name) @def.interface
+(function_definition name: (identifier) @def.name) @def.function
+(call_expression function: (identifier) @call.name) @call.node
+(import_declaration (identifier) @import.name) @import.node
+"""
+
+_LUA_Q = """
+(function_declaration name: (identifier) @def.name) @def.function
+(function_call name: (identifier) @call.name) @call.node
+"""
+
+# SQL is the one language where a "definition" is a schema object. A table
+# created here and selected from elsewhere is the closest orgono gets to
+# connecting application code to a database table.
+_SQL_Q = """
+(create_table (object_reference name: (identifier) @def.name)) @def.class
+(create_view (object_reference name: (identifier) @def.name)) @def.class
+(relation (object_reference name: (identifier) @call.name)) @call.node
+"""
+
+
 LANGUAGES: dict[str, LanguageSpec] = {
     "python": LanguageSpec(
         name="python",
@@ -167,7 +265,55 @@ LANGUAGES: dict[str, LanguageSpec] = {
         query=_JAVA_Q,
         scope_nodes=("class_declaration", "method_declaration", "block"),
     ),
+    "c": LanguageSpec(
+        name="c", extensions=(".c", ".h"), module="tree_sitter_c", query=_C_Q,
+        scope_nodes=("function_definition", "compound_statement"),
+    ),
+    "cpp": LanguageSpec(
+        name="cpp",
+        extensions=(".cpp", ".cc", ".cxx", ".hpp", ".hh", ".hxx"),
+        module="tree_sitter_cpp", query=_CPP_Q,
+        scope_nodes=("function_definition", "class_specifier", "compound_statement"),
+    ),
+    "c_sharp": LanguageSpec(
+        name="c_sharp", extensions=(".cs",), module="tree_sitter_c_sharp", query=_CSHARP_Q,
+        scope_nodes=("class_declaration", "method_declaration", "block"),
+    ),
+    "ruby": LanguageSpec(
+        name="ruby", extensions=(".rb", ".rake", ".gemspec"), module="tree_sitter_ruby",
+        query=_RUBY_Q, scope_nodes=("class", "method", "block"),
+    ),
+    "php": LanguageSpec(
+        name="php", extensions=(".php", ".phtml"), module="tree_sitter_php",
+        language_attr="language_php", query=_PHP_Q,
+        scope_nodes=("class_declaration", "function_definition", "compound_statement"),
+    ),
+    "bash": LanguageSpec(
+        name="bash", extensions=(".sh", ".bash", ".zsh"), module="tree_sitter_bash",
+        query=_BASH_Q, scope_nodes=("function_definition", "compound_statement"),
+    ),
+    "kotlin": LanguageSpec(
+        name="kotlin", extensions=(".kt", ".kts"), module="tree_sitter_kotlin",
+        query=_KOTLIN_Q, scope_nodes=("class_declaration", "function_declaration"),
+    ),
+    "swift": LanguageSpec(
+        name="swift", extensions=(".swift",), module="tree_sitter_swift", query=_SWIFT_Q,
+        scope_nodes=("class_declaration", "function_declaration"),
+    ),
+    "scala": LanguageSpec(
+        name="scala", extensions=(".scala", ".sc"), module="tree_sitter_scala",
+        query=_SCALA_Q, scope_nodes=("class_definition", "function_definition"),
+    ),
+    "lua": LanguageSpec(
+        name="lua", extensions=(".lua",), module="tree_sitter_lua", query=_LUA_Q,
+        scope_nodes=("function_declaration", "block"),
+    ),
+    "sql": LanguageSpec(
+        name="sql", extensions=(".sql",), module="tree_sitter_sql", query=_SQL_Q,
+        scope_nodes=(),
+    ),
 }
+
 
 EXTENSION_MAP: dict[str, str] = {}
 for _spec in LANGUAGES.values():
@@ -177,6 +323,24 @@ for _spec in LANGUAGES.values():
 
 class UnsupportedLanguage(LookupError):
     pass
+
+
+class GrammarNotInstalled(UnsupportedLanguage):
+    """The language is known, but its grammar package is not importable here.
+
+    Raised instead of crashing so a missing or broken grammar degrades to an
+    `unsupported` file report naming the exact pip package that fixes it.
+    """
+
+    def __init__(self, language: str, module: str, cause: str = "") -> None:
+        self.language = language
+        self.module = module
+        pip_name = module.replace("_", "-")
+        detail = f": {cause}" if cause else ""
+        super().__init__(
+            f"grammar for '{language}' is not installed{detail} "
+            f"(pip install {pip_name})"
+        )
 
 
 def language_for_path(path: str) -> str | None:
@@ -193,9 +357,35 @@ def get_language(name: str) -> Language:
     spec = LANGUAGES.get(name)
     if spec is None:
         raise UnsupportedLanguage(name)
-    module = __import__(spec.module)
-    ptr = getattr(module, spec.language_attr)()
-    return Language(ptr)
+    try:
+        module = __import__(spec.module)
+        ptr = getattr(module, spec.language_attr)()
+        return Language(ptr)
+    except (ImportError, AttributeError, TypeError, ValueError) as exc:
+        raise GrammarNotInstalled(name, spec.module, str(exc)) from exc
+
+
+def grammar_available(name: str) -> bool:
+    """True if this language's grammar can actually be loaded on this machine."""
+    try:
+        get_language(name)
+    except UnsupportedLanguage:
+        return False
+    return True
+
+
+def available_languages() -> list[str]:
+    """Languages whose grammars are importable here, sorted."""
+    return sorted(n for n in LANGUAGES if grammar_available(n))
+
+
+def missing_languages() -> dict[str, str]:
+    """Known languages whose grammar is not importable, mapped to the pip name."""
+    return {
+        name: LANGUAGES[name].module.replace("_", "-")
+        for name in sorted(LANGUAGES)
+        if not grammar_available(name)
+    }
 
 
 @functools.cache

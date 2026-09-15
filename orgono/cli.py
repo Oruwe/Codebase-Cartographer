@@ -234,6 +234,27 @@ def cmd_report(args) -> int:
     return 0
 
 
+def cmd_stacks(args) -> int:
+    """What the repository is built with. Reads manifests; executes nothing."""
+    from .app.core.stacks import detect_stacks
+
+    report = detect_stacks(args.path, max_depth=args.depth)
+    if args.json:
+        _emit(report.to_dict(), args)
+        return 0
+    r, d, b, c, y, red, g = _color(_use_color(args))
+    groups = report.by_category()
+    if not groups:
+        print(f"{d}no recognised stack manifests found{r}")
+        return 0
+    for category, items in groups.items():
+        print(f"{b}{category}{r}")
+        for item in items:
+            detail = f" {d}({item.detail}){r}" if item.detail else ""
+            print(f"  {c}{item.name:<28}{r}{detail} {d}<- {item.evidence}{r}")
+    return 0
+
+
 def cmd_tools(args) -> int:
     print(tool_manifest())
     return 0
@@ -403,10 +424,15 @@ def cmd_doctor(args) -> int:
     ok = True
     print(f"{b}orgono{r} {__version__}")
     print(f"{b}python{r}    {sys.version.split()[0]}")
-    print(f"{b}languages{r}")
+    from .app.core.languages import get_query, missing_languages
+
+    missing = missing_languages()
+    print(f"{b}languages{r} {d}({len(LANGUAGES) - len(missing)} of {len(LANGUAGES)} ready){r}")
     for name, spec in sorted(LANGUAGES.items()):
+        if name in missing:
+            print(f"  {y}--{r}   {name:<12} {d}not installed - pip install {missing[name]}{r}")
+            continue
         try:
-            from .app.core.languages import get_query
             get_query(name)
             print(f"  {g}ok{r}   {name:<12} {d}{', '.join(spec.extensions)}{r}")
         except Exception as exc:  # noqa: BLE001
@@ -517,6 +543,10 @@ def build_parser() -> argparse.ArgumentParser:
     rp = common(sub.add_parser("report", help="files that were skipped or failed to parse"))
     rp.add_argument("--unparsed", action="store_true", help="only genuine parse failures")
     rp.set_defaults(func=cmd_report)
+
+    st = common(sub.add_parser("stacks", help="frameworks, build systems and infra in use"))
+    st.add_argument("--depth", type=int, default=3, help="how deep to look for manifests")
+    st.set_defaults(func=cmd_stacks)
 
     t = sub.add_parser("tools", help="print the tool surface offered to sibling agents")
     t.set_defaults(func=cmd_tools)

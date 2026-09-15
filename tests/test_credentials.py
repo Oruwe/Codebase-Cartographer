@@ -1,6 +1,8 @@
 """Key handling: read from the environment or the user's .env; never stored by us."""
 
 
+import os
+
 import pytest
 
 from orgono.app.core import credentials as cr
@@ -63,7 +65,9 @@ def test_save_to_env_file_is_explicit_and_gitignores(tmp_path, monkeypatch):
     target = cr.save_to_env_file("sk-or-v1-secret", root=tmp_path)
     assert target.exists()
     assert "sk-or-v1-secret" in target.read_text()
-    assert oct(target.stat().st_mode)[-3:] == "600"
+    if os.name == "posix":
+        # Windows has no POSIX mode bits; chmod there is a no-op by design.
+        assert oct(target.stat().st_mode)[-3:] == "600"
     assert ".env" in (tmp_path / ".gitignore").read_text()
 
 

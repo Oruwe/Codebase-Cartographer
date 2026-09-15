@@ -13,13 +13,24 @@ from dataclasses import asdict, dataclass, field, replace
 # never half-parsed. Kept in sync with orgono.app.core.languages.LANGUAGES
 # by test_languages.py.
 SUPPORTED_LANGUAGES = (
-    "python",
+    "bash",
+    "c",
+    "c_sharp",
+    "cpp",
+    "go",
+    "java",
     "javascript",
+    "kotlin",
+    "lua",
+    "php",
+    "python",
+    "ruby",
+    "rust",
+    "scala",
+    "sql",
+    "swift",
     "typescript",
     "tsx",
-    "go",
-    "rust",
-    "java",
 )
 
 # Directories never traversed. Vendored bundles produce noise, not architecture.

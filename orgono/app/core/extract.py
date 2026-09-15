@@ -24,7 +24,13 @@ from pathlib import Path
 
 from .config import Config
 from .graph import Edge, FileReport, Graph, Node, make_node_id, summarize
-from .languages import LANGUAGES, get_parser, language_for_path, run_query
+from .languages import (
+    LANGUAGES,
+    UnsupportedLanguage,
+    get_parser,
+    language_for_path,
+    run_query,
+)
 from .obs import NULL_LOGGER, Logger
 
 CACHE_VERSION = "orgono-cache/1"
@@ -42,6 +48,18 @@ class _Def:
     path: str
     start_line: int
     end_line: int
+
+
+def _rel(path: Path, root: Path) -> str:
+    """Relative path as a POSIX string, on every operating system.
+
+    `str(Path.relative_to())` yields backslashes on Windows, which would make
+    node ids, and therefore the whole graph, differ between operating systems -
+    the same commit would not produce the same graph, and a graph.json built on
+    Linux would not match one built on Windows. Paths in the graph are always
+    forward-slashed.
+    """
+    return path.relative_to(root).as_posix()
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -82,7 +100,7 @@ def iter_source_files(root: Path, cfg: Config, log: Logger) -> tuple[list[Path],
             if dirnames:
                 log.warn(
                     "traverse.depth_capped",
-                    path=str(current.relative_to(root)),
+                    path=_rel(current, root),
                     depth=depth,
                     limit=cfg.limits.max_depth,
                 )
@@ -105,7 +123,7 @@ def iter_source_files(root: Path, cfg: Config, log: Logger) -> tuple[list[Path],
 
         for filename in sorted(filenames):
             path = current / filename
-            rel = str(path.relative_to(root))
+            rel = _rel(path, root)
             if len(selected) >= cfg.limits.max_files:
                 skipped.append(FileReport(path=rel, status="skipped", reason="max_files_reached"))
                 continue
@@ -158,7 +176,7 @@ def _collect_unsupported(root: Path, cfg: Config) -> list[FileReport]:
             ext = Path(filename).suffix.lower()
             if not ext or ext in known_noise or language_for_path(filename):
                 continue
-            rel = str((current / filename).relative_to(root))
+            rel = _rel(current / filename, root)
             reports.append(
                 FileReport(path=rel, status="unsupported", reason=f"no grammar for '{ext}'")
             )
@@ -235,6 +253,13 @@ def extract_file(
 
     try:
         tree = get_parser(language).parse(source)
+    except UnsupportedLanguage as exc:
+        # The grammar is not installed on this machine. Say so, and say how to
+        # fix it, rather than dropping the file or crashing the run.
+        report.status = "unsupported"
+        report.reason = str(exc)
+        log.warn("file.grammar_missing", path=rel_path, language=language, reason=str(exc))
+        return report
     except Exception as exc:  # noqa: BLE001
         report.status = "unparsed"
         report.reason = f"parse_error: {type(exc).__name__}: {exc}"
@@ -496,11 +521,11 @@ def extract_repo(
     with log.stage("parse", files=len(files)):
         for path in files:
             if time.perf_counter() > deadline:
-                rel = str(path.relative_to(root))
+                rel = _rel(path, root)
                 graph.files[rel] = FileReport(path=rel, status="skipped", reason="wall_clock_exceeded")
                 log.warn("extract.deadline", path=rel, limit=cfg.limits.max_wall_seconds)
                 continue
-            rel = str(path.relative_to(root))
+            rel = _rel(path, root)
             try:
                 source = path.read_bytes()
             except OSError as exc:

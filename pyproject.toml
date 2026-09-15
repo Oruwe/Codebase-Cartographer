@@ -23,6 +23,20 @@ dependencies = [
   "tree-sitter-go>=0.25,<0.26",
   "tree-sitter-rust>=0.24,<0.25",
   "tree-sitter-java>=0.23,<0.24",
+  # Every grammar below ships prebuilt wheels for Linux, macOS (arm64 and
+  # x86_64) and Windows, so one `pip install orgono` works on any OS with no
+  # compiler and no download at run time.
+  "tree-sitter-c>=0.24,<0.25",
+  "tree-sitter-cpp>=0.23,<0.24",
+  "tree-sitter-c-sharp>=0.23,<0.24",
+  "tree-sitter-ruby>=0.23,<0.24",
+  "tree-sitter-php>=0.24,<0.25",
+  "tree-sitter-bash>=0.25,<0.26",
+  "tree-sitter-kotlin>=1.1,<2.0",
+  "tree-sitter-swift>=0.7,<0.8",
+  "tree-sitter-scala>=0.26,<0.27",
+  "tree-sitter-lua>=0.5,<0.6",
+  "tree-sitter-sql>=0.3,<0.4",
 ]
 
 [project.optional-dependencies]
@@ -39,7 +53,9 @@ Homepage = "https://github.com/oruwe/codebase-cartographer"
 include = ["orgono*"]
 
 [tool.setuptools.package-data]
-"orgono.web" = ["*.html", "*.js", "*.css", "vendor/*.js"]
+# vendor/* (not vendor/*.js): three.js is MIT and we redistribute it, so its
+# LICENSE file must travel with the wheel. Asserted by tests/test_packaging.py.
+"orgono.web" = ["*.html", "*.js", "*.css", "vendor/*"]
 
 [tool.ruff]
 line-length = 100
