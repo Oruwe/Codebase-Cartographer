@@ -174,6 +174,13 @@ def test_stacks_imports_without_tomllib(monkeypatch):
     import importlib
     import sys
 
+    # On 3.11+ `tomli` is intentionally NOT installed (it is declared only for
+    # python<3.11), so there is nothing to fall back to and the scenario cannot
+    # be reproduced. Skip rather than fail. This test previously passed only
+    # because the development environment happened to have tomli installed by
+    # hand -- a package CI does not have.
+    pytest.importorskip("tomli", reason="tomli is only a dependency on Python < 3.11")
+
     class BlockTomllib:
         def find_spec(self, name, path=None, target=None):
             if name == "tomllib":
