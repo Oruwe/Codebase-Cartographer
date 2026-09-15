@@ -36,6 +36,9 @@ class QueryResult:
     truncated: bool = False
     total_matched: int = 0
     notes: list[str] = field(default_factory=list)
+    # How many secrets were redacted while building this result. Counted where
+    # the redaction happens, so the dry-run payload reports the true number.
+    redactions: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -46,6 +49,7 @@ class QueryResult:
             "truncated": self.truncated,
             "total_matched": self.total_matched,
             "notes": self.notes,
+            "redactions": self.redactions,
         }
 
 
@@ -125,7 +129,7 @@ class QueryEngine:
         return result
 
     # -- snippets -------------------------------------------------------
-    def snippet_for(self, node: Node) -> list[str]:
+    def snippet_for(self, node: Node, counter: list[int] | None = None) -> list[str]:
         """Read at most `max_snippet_lines` lines for a node, redacted.
 
         Reads are confined to the graph root; a node whose path escapes it
@@ -146,18 +150,26 @@ class QueryEngine:
         end = min(node.end_line or node.start_line, start + self.caps.max_snippet_lines)
         end = max(end, start + 1)
         chunk = lines[start : min(end, start + self.caps.max_snippet_lines)]
-        return [redact_text(line.rstrip("\n"))[0] for line in chunk]
+        out: list[str] = []
+        for line in chunk:
+            text, n = redact_text(line.rstrip("\n"))
+            if counter is not None:
+                counter[0] += n
+            out.append(text)
+        return out
 
     def _attach_snippets(self, result: QueryResult, node_ids: list[str], want: bool) -> None:
         if not want:
             return
+        counter = [0]
         for nid in node_ids[: self.caps.max_nodes]:
             node = self.graph.nodes.get(nid)
             if node is None:
                 continue
-            lines = self.snippet_for(node)
+            lines = self.snippet_for(node, counter=counter)
             if lines:
                 result.snippets[nid] = lines
+        result.redactions += counter[0]
 
     # -- operations -----------------------------------------------------
     def find_symbol(

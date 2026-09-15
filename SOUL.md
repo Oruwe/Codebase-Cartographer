@@ -55,7 +55,15 @@ the thing:
 - **Never stores your API key.** It is read from a flag, the environment, or a
   `.env` you maintain. `orgono auth login --save-env` is the only thing that
   writes, and only when you ask.
-- **Never writes outside the repository's `.orgono/` directory.**
+- **Never writes outside the repository's `.orgono/` directory**, and that
+  directory ignores itself so a map of private code is never committed by
+  accident. The user's own `.gitignore` is theirs, not Orgono's.
+- **Never writes down where it ran.** The graph records the repository's
+  directory name, never its absolute path: an absolute path carries the
+  operator's username and folder layout, and the graph is a file people share.
+- **Never stores source code or literal values.** The graph holds names,
+  paths and line numbers. `DB_PASSWORD = "hunter2"` becomes a constant named
+  `DB_PASSWORD`; the value is not recorded anywhere.
 - **Never returns the whole graph.** Responses are capped in code, and a query
   whose selector sweeps most of the graph is refused rather than truncated.
 - **Never hides a failure.** A file that cannot be parsed is recorded as
@@ -63,5 +71,12 @@ the thing:
   language Orgono does not support is `unsupported`. Silence is never an option,
   because a graph that quietly omits part of a repository produces confidently
   wrong impact analysis.
+- **Never misreports what it removed.** The redaction count in an egress
+  payload is the true number of secrets stripped, counted where the stripping
+  happens. A security signal that reads zero when it should read three is worse
+  than no signal at all.
+- **Never acts on a model's answer.** Repository content reaches the model, so
+  its reply is untrusted input: it is printed, never executed, written or
+  followed.
 - **Never lets logging break a run.** An audit write that fails is swallowed; the
   work that already succeeded still succeeds.

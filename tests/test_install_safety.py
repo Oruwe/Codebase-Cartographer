@@ -109,11 +109,53 @@ def test_no_writes_outside_the_target_repository(tmp_path, silent_log, monkeypat
     assert list(fake_home.rglob("*")) == [], "orgono wrote into the user's home directory"
 
 
+def _code_only(source: str) -> str:
+    """Strip comments and string literals, so prose cannot trip a code check."""
+    import io
+    import tokenize
+
+    kept = []
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(source).readline):
+            if tok.type in (tokenize.COMMENT, tokenize.STRING):
+                continue
+            kept.append(tok.string)
+    except (tokenize.TokenError, IndentationError):
+        return source
+    return " ".join(kept)
+
+
 def test_no_telemetry_or_auto_update_endpoints():
+    """No telemetry SDK, no analytics client, no self-updater.
+
+    Scans executable tokens rather than raw text: the word "telemetry" appearing
+    in a comment is documentation, not a network call, and a check that cannot
+    tell the difference is a check nobody will keep.
+    """
+    sdks = ("sentry_sdk", "posthog", "mixpanel", "segment_analytics",
+            "amplitude", "datadog", "opentelemetry", "bugsnag", "rollbar")
+    offenders = []
     for path, body in _bodies().items():
-        lowered = body.lower()
-        for marker in ("telemetry", "analytics", "sentry", "mixpanel", "auto-update", "autoupdate"):
-            assert marker not in lowered, f"{path.name} mentions {marker}"
+        code = _code_only(body).lower()
+        for sdk in sdks:
+            if sdk in code:
+                offenders.append(f"{path.name}: {sdk}")
+        for updater in ("urlretrieve", "check_for_update", "self_update"):
+            if updater in code:
+                offenders.append(f"{path.name}: {updater}")
+    assert not offenders, f"telemetry or auto-update machinery found: {offenders}"
+
+
+def test_no_telemetry_hosts_are_referenced_anywhere():
+    """Belt and braces: no telemetry endpoint, even in a comment or docstring."""
+    import re
+    hosts = set()
+    for _path, body in _bodies().items():
+        hosts |= set(re.findall(r"https?://([A-Za-z0-9.\-]+)", body))
+    for host in hosts:
+        for bad in ("sentry.io", "posthog", "mixpanel", "segment.io", "amplitude",
+                    "datadoghq", "google-analytics"):
+            assert bad not in host, f"telemetry endpoint referenced: {host}"
 
 
 def test_the_only_outbound_host_is_the_configured_egress_endpoint():

@@ -166,11 +166,25 @@ line below is asserted by `tests/test_install_safety.py`, not just claimed.
 
 **It writes exactly one place:** `<repo>/.orgono/` — the graph and its cache.
 Nothing is written to your home directory, your shell profile, or anywhere
-outside the repository you point it at.
+outside the repository you point it at. That directory ignores itself (orgono
+drops a `.gitignore` containing `*` inside it), so a map of your private
+codebase is never committed by accident. Your own `.gitignore` is never touched.
+
+**The graph stores structure, not content.** `graph.json` holds symbol names,
+file paths and line numbers — never source code and never literal values. A
+line like `DB_PASSWORD = "hunter2"` is recorded as a constant named
+`DB_PASSWORD`; the value is not stored anywhere. It also records the repository
+directory *name*, never its absolute path, because an absolute path carries your
+OS username and folder layout and `graph.json` is a file people share.
 
 **It makes no network connection** unless you pass `--send` together with
 `--enable-egress` and `--no-dry-run`. The local pipeline has no HTTP client:
 `requests` is imported lazily and only inside the egress path.
+
+**Secrets are stripped before anything leaves.** Snippets are redacted the
+moment they are read, and the dry-run payload reports how many secrets were
+removed. If that count says 3, three were removed; if it says 0, your code was
+clean. (It reported 0 unconditionally until an audit caught it — see below.)
 
 **It never stores your API key.** There is no credentials file. The key is read
 from a flag, the environment, or a `.env` you maintain, and held in memory for
@@ -186,9 +200,16 @@ shell.
 and exactly one console entry point (`orgono`). There is no telemetry, no
 analytics, no crash reporting and no auto-update.
 
-**It binds to loopback.** `orgono view` serves on `127.0.0.1` only. The 3D
-viewer loads a vendored copy of three.js from disk and fetches nothing from the
-internet.
+**It binds to loopback.** `orgono view` serves on `127.0.0.1` only, verified by
+attempting a connection from a non-loopback interface. Path traversal is refused
+(tested against encoded, doubled and backslash variants). The 3D viewer loads a
+vendored copy of three.js from disk and fetches nothing from the internet, and
+its payload carries no source code.
+
+**Model replies are display-only.** Repository content reaches the model when you
+opt into egress, so its reply is untrusted input: orgono prints it and nothing
+else. There is no path from a model response to a file write, a shell command or
+a further tool call.
 
 **Footprint:** about 40 MB installed — 1 MB of orgono and 39 MB of compiled
 grammars for 18 languages. That size is the cost of working entirely offline;
@@ -267,6 +288,22 @@ Read these before trusting an answer.
 - `.env` parsing is intentionally minimal (`KEY=VALUE`, quotes, `export`,
   `#` comments). It is not a full dotenv implementation.
 
+## Privacy audit
+
+These were found by attacking the tool, not by reading it. Each is now a test in
+`tests/test_privacy.py`.
+
+| finding | severity | status |
+|---|---|---|
+| `graph.json` stored the **absolute repository path**, leaking the OS username and folder layout of whoever built it | medium | fixed — only the directory name is stored |
+| `.orgono/` was **not self-ignoring**, so a map of a private codebase could be committed | medium | fixed — a self-ignoring `.gitignore` is written inside it |
+| The dry-run reported **`redactions: 0`** even when secrets had been stripped, because snippets were redacted on read and the second pass found nothing left to count | medium | fixed — counted where it happens and carried through both the `explain` and `ask` paths |
+| A **secret-shaped filename** is stored unredacted as a node name | low | **not fixed, by design** — the path must be real for snippets to resolve, and such a filename is already in the user's git history |
+
+Verified clean and unchanged: no secret values on disk, `.env` never parsed,
+symlinks skipped, path traversal refused, loopback-only binding, no source code
+in the viewer payload, and no sink from model output to execution.
+
 ## Learning from graphify's bug tracker
 
 Graphify solves a related problem and has a large public issue tracker, which is
@@ -314,7 +351,7 @@ rules against the refusal paths.
 
 ```bash
 pip install -e ".[dev]"
-pytest -q          # 300 tests
+pytest -q          # 319 tests
 ruff check .
 python tools/probe_grammars.py --captures   # re-verify grammar node names
 ```

@@ -78,7 +78,10 @@ def build_plan(
 ) -> EgressPlan:
     """Build the exact request that would be sent. Never opens a socket."""
     log = log or NULL_LOGGER
-    redactions = 0
+    # Snippets are redacted the moment they are read, so a second pass here finds
+    # nothing and would report 0. Start from what was already removed, otherwise
+    # the dry-run tells the operator "no secrets found" when secrets were found.
+    redactions = getattr(result, "redactions", 0)
 
     context_lines: list[str] = []
     for node in result.nodes:
@@ -99,7 +102,9 @@ def build_plan(
     if policy.redact:
         raw_context, n1 = redact_text(raw_context)
         question, n2 = redact_text(question)
-        redactions = n1 + n2
+        # Add to what snippet reading already removed; assigning here would
+        # discard it and report 0 redactions on a payload that had several.
+        redactions += n1 + n2
 
     system = (
         "You are answering a question about a code knowledge graph. "

@@ -190,6 +190,10 @@ def merge_results(grounding: Grounding, max_nodes: int, max_edges: int) -> Query
             merged.edges.append(edge)
         for nid, lines in res.snippets.items():
             merged.snippets.setdefault(nid, lines)
+    # Carry the redaction count forward: it is security telemetry, and a merge
+    # that silently reset it would report "no secrets found" on a payload that
+    # had them removed.
+    merged.redactions = sum(r.redactions for r in grounding.results)
     merged.nodes.sort(key=lambda n: n["id"])
     merged.edges.sort(key=lambda e: (e["src"], e["type"], e["dst"], e["line"]))
     merged.total_matched = len(merged.nodes)

@@ -10,6 +10,7 @@ Every call is logged with its caller, its parameters and how much it returned.
 
 from __future__ import annotations
 
+import contextlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +24,21 @@ from .obs import Logger, new_trace_id
 from .query import QueryEngine, QueryRefused, QueryResult
 
 DEFAULT_OUT_DIR = ".orgono"
+
+
+def _self_ignore(out_dir: Path) -> None:
+    """Make the output directory ignore itself.
+
+    graph.json describes the private structure of someone's codebase. Writing a
+    self-ignoring .gitignore inside our own directory keeps it out of commits
+    without touching the user's .gitignore, which is theirs, not ours.
+    """
+    marker = out_dir / ".gitignore"
+    if marker.exists():
+        return
+    # Never fail a run over a convenience file.
+    with contextlib.suppress(OSError):
+        marker.write_text("# Created by orgono. This directory is local-only.\n*\n", encoding="utf-8")
 
 # The declared tool surface. Asserted against this module by tests/test_tool_surface.py
 # so the contract cannot drift without a test failing.
@@ -97,6 +113,7 @@ class Cartographer:
         """Write the graph. Writes never escape the output directory."""
         out = self.out_dir()
         out.mkdir(parents=True, exist_ok=True)
+        _self_ignore(out)
         target = self.graph_path()
         resolved_root = self.root.resolve()
         if not target.resolve().is_relative_to(resolved_root):

@@ -126,10 +126,19 @@ class Graph:
 
     # -- serialization --------------------------------------------------
     def to_dict(self) -> dict:
-        """A fully sorted, deterministic dict. Same input -> identical bytes."""
+        """A fully sorted, deterministic dict. Same input -> identical bytes.
+
+        `root` is serialised as the repository's directory NAME, never its
+        absolute path: an absolute path carries the operator's OS username and
+        directory layout (/Users/jane.doe/work/client-x), and graph.json is a
+        file people share. The absolute path stays in memory for the life of the
+        process and is never written down.
+        """
+        from pathlib import Path as _P
+
         return {
             "schema_version": SCHEMA_VERSION,
-            "root": self.root,
+            "root": _P(self.root).name if self.root else "",
             "nodes": [n.to_dict() for n in self.sorted_nodes()],
             "edges": [e.to_dict() for e in self.sorted_edges()],
             "files": [f.to_dict() for f in self.sorted_files()],
