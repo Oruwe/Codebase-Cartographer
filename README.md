@@ -7,8 +7,16 @@ localhost.
 
 It works completely offline. No API key, no network, no account.
 
+![Orgono's 3D map with the assistant answering a question and highlighting the
+subgraph it cites](docs/demo-assistant.png)
+
+*Asking "how does extract_repo connect to redact_text?" — the answer highlights
+the 79 nodes it cites, frames them, and links each citation back to `path:line`.*
+
 ```bash
-pip install orgono          # one command, every supported language, any OS
+# Not yet on PyPI — install from source:
+git clone https://github.com/Oruwe/Codebase-Cartographer
+cd Codebase-Cartographer && pip install .
 
 orgono map                  # build the graph
 orgono view                 # 3D map + assistant at http://127.0.0.1:7373
@@ -21,7 +29,7 @@ orgono ask "what calls redact_text?"
 Prefer an isolated install for a command-line tool:
 
 ```bash
-pipx install orgono         # keeps orgono out of your system Python
+pipx install .              # keeps orgono out of your system Python
 ```
 
 **Requirements:** Python 3.10+ and nothing else. No compiler, no Node, no
@@ -391,4 +399,5 @@ the graph.
 
 ## License
 
-Apache-2.0. Vendored `three.js` is MIT (`orgono/web/vendor/three.LICENSE`).
+Apache-2.0 — see [LICENSE](LICENSE). Vendored `three.js` is MIT; see
+[NOTICE](NOTICE) and `orgono/web/vendor/three.LICENSE`.
