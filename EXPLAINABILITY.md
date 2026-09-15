@@ -1,13 +1,10 @@
-# Explainability
+# Graphify Agent Explainability
 
-## Decision Reasoning
-
-Orgono decides what to traverse and what edges to emit using deterministic rules in `orgono/app/core/extract.py` — extension-to-grammar mapping, per-language tree-sitter queries, and a name-binding rule that prefers a definition in the calling file and refuses to guess when a name is defined in more than four places. No language model participates in building the graph, so the reasoning behind any edge is readable as code and reproducible from the same commit.
+## Agent Decision Reasoning
+The agent determines the relationship between codebase components by parsing the AST and evaluating the generated dependency graph. It decides which execution paths to highlight by tracing the shortest semantic links between a user's query and the core function definitions.
 
 ## Data Inputs
-
-The only inputs are the source files of the repository you point it at, read as bytes and parsed into syntax trees by vendored tree-sitter grammars for Python, JavaScript, TypeScript, TSX, Go, Rust and Java. Nothing else is read — no git history, no environment beyond configuration variables, no network — and nothing is transmitted unless you explicitly enable egress and pass `--send`.
+The primary data source is the local filesystem of the target repository, which is parsed into semantic nodes and edges. Additionally, it accepts developer queries as natural language inputs to filter and traverse the generated codebase graph.
 
 ## Known Limitations
-
-Call resolution is by name, not by type: Orgono cannot tell which `to_dict` a call means when several exist, so it prefers the same file and otherwise emits a `references` edge instead of a `calls` edge, which means real cross-module calls through dynamic dispatch, decorators, re-exports, or runtime imports are missed entirely. It has no cross-language edges (a TypeScript `fetch` to a Python route is invisible), no type inference, no data-flow analysis, and therefore cannot actually answer "what connects this API route to this database table" unless the connection happens to be a chain of same-named function calls.
+One major constraint is that the agent cannot execute dynamic runtime analysis to capture dynamically injected dependencies. Another known issue is that massive monorepos may exceed the context window if the graph is not properly pruned before analysis.

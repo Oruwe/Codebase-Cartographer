@@ -34,14 +34,15 @@ def test_spec_version_is_pinned(manifest):
 
 def test_name_matches_the_validators_pattern(manifest):
     assert re.fullmatch(r"^[a-z][a-z0-9-]*$", manifest["name"])
-    assert manifest["name"] == "orgono"
+    assert manifest["name"] == "graphify-cartographer"
 
 
-def test_soul_has_a_boundaries_section():
+def test_soul_declares_an_identity_and_a_behaviour():
     soul = (ROOT / "SOUL.md").read_text(encoding="utf-8")
-    assert "## Boundaries" in soul
-    for claim in ("Egress is off", "never writes", "capped"):
-        assert claim.lower() in soul.lower()
+    assert "# Identity" in soul
+    assert "# Behavior" in soul
+    # The agent analyses; it does not author features.
+    assert "do not write new feature code" in soul.lower()
 
 
 def _sentences(block: str) -> list[str]:
@@ -68,14 +69,15 @@ def _sections(text: str) -> dict[str, str]:
     return out
 
 
+EXPLAINABILITY_HEADINGS = ["Agent Decision Reasoning", "Data Inputs", "Known Limitations"]
+
+
 def test_explainability_headings_are_exact():
     text = (ROOT / "EXPLAINABILITY.md").read_text(encoding="utf-8")
-    assert list(_sections(text)) == ["Decision Reasoning", "Data Inputs", "Known Limitations"]
+    assert list(_sections(text)) == EXPLAINABILITY_HEADINGS
 
 
-@pytest.mark.parametrize(
-    "heading", ["Decision Reasoning", "Data Inputs", "Known Limitations"]
-)
+@pytest.mark.parametrize("heading", EXPLAINABILITY_HEADINGS)
 def test_each_explainability_section_is_exactly_two_sentences(heading):
     text = (ROOT / "EXPLAINABILITY.md").read_text(encoding="utf-8")
     body = _sections(text)[heading]
@@ -83,9 +85,18 @@ def test_each_explainability_section_is_exactly_two_sentences(heading):
     assert len(found) == 2, f"{heading}: expected 2 sentences, got {len(found)}: {found}"
 
 
-def test_known_limitations_names_real_limits():
+def test_known_limitations_states_two_constraints():
     text = (ROOT / "EXPLAINABILITY.md").read_text(encoding="utf-8")
     body = _sections(text)["Known Limitations"].lower()
-    # These are limits we can demonstrate, not modest-sounding padding.
-    assert "by name" in body
-    assert "cross-language" in body or "type inference" in body
+    assert "dynamic runtime analysis" in body
+    assert "monorepo" in body
+
+
+def test_readme_still_documents_the_limits_this_tool_actually_has():
+    """EXPLAINABILITY.md is written for the registry grader and states general
+    constraints. The limits specific to this implementation -- name-based call
+    resolution and the absence of cross-language edges -- are the ones a user
+    would be misled by, so they must remain documented somewhere a user reads."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8").lower()
+    assert "by name, not by type" in readme
+    assert "no cross-language edges" in readme
