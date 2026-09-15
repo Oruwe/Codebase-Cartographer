@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orgono"
+version = "0.1.0"
+description = "Orgono - a deterministic codebase cartographer: AST-only knowledge graph and impact analysis over your repository."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Orgono contributors" }]
+keywords = ["ast", "tree-sitter", "knowledge-graph", "impact-analysis", "codebase", "opengap"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+  "tree-sitter>=0.25,<0.27",
+  "tree-sitter-python>=0.25,<0.26",
+  "tree-sitter-javascript>=0.25,<0.26",
+  "tree-sitter-typescript>=0.23,<0.24",
+  "tree-sitter-go>=0.25,<0.26",
+  "tree-sitter-rust>=0.24,<0.25",
+  "tree-sitter-java>=0.23,<0.24",
+]
+
+[project.optional-dependencies]
+egress = ["requests>=2.31"]
+dev = ["pytest>=8.0", "ruff>=0.6", "requests>=2.31", "pyyaml>=6.0"]
+
+[project.scripts]
+orgono = "orgono.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/oruwe/codebase-cartographer"
+
+[tool.setuptools.packages.find]
+include = ["orgono*"]
+
+[tool.setuptools.package-data]
+"orgono.web" = ["*.html", "*.js", "*.css", "vendor/*.js"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+# fixtures/golden_repo/src/broken.py is deliberately unparseable: it is the
+# fixture that proves a broken file is reported rather than silently dropped.
+exclude = ["fixtures", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = ["E501", "B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = ["network: tests that require network access (deselected by default)"]

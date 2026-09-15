@@ -1,0 +1,56 @@
+# Orgono deployment blueprint.
+#
+# Every secret below is NAMED but UNVALUED. Supply them through your platform's
+# secret store. Orgono refuses to boot when ORGONO_ENV=production and a required
+# secret is missing, rather than starting in a degraded state nobody notices.
+apiVersion: orgono/v1
+kind: Deployment
+
+service:
+  name: orgono
+  image: ghcr.io/oruwe/orgono:0.1.0
+  command: ["orgono", "view", "--host", "0.0.0.0", "--port", "7373", "--no-browser"]
+  port: 7373
+  healthcheck:
+    command: ["orgono", "doctor"]
+    interval_seconds: 30
+
+# ---------------------------------------------------------------------------
+# Secrets: named, never valued. Startup fails closed if a required one is absent.
+# ---------------------------------------------------------------------------
+secrets:
+  - name: ORGONO_OPENROUTER_API_KEY
+    required_when: "ORGONO_EGRESS_ENABLED=1"
+    description: >-
+      OpenRouter API key. Only consulted when egress is explicitly enabled.
+      Orgono never writes this to disk; it is read from the environment.
+    value: ~            # supply at deploy time
+
+environment:
+  ORGONO_ENV: production          # makes assert_bootable() strict
+
+  # --- egress: the security boundary. Off unless deliberately switched on. ---
+  ORGONO_EGRESS_ENABLED: "0"
+  ORGONO_EGRESS_DRY_RUN: "1"
+  ORGONO_MAX_PROMPT_TOKENS: "8000"
+  ORGONO_MAX_COMPLETION_TOKENS: "1024"
+  ORGONO_MAX_SPEND_USD: "0.50"
+
+  # --- extraction bounds: defaults that cannot hang a host ---
+  ORGONO_MAX_FILES: "5000"
+  ORGONO_MAX_FILE_BYTES: "1048576"
+  ORGONO_MAX_DEPTH: "25"
+  ORGONO_MAX_WALL_SECONDS: "120"
+
+  # --- response caps enforced in code ---
+  ORGONO_QUERY_MAX_NODES: "200"
+  ORGONO_QUERY_MAX_EDGES: "400"
+  ORGONO_QUERY_MAX_SNIPPET_LINES: "12"
+
+  ORGONO_LOG_LEVEL: info
+
+notes:
+  - "The viewer binds to loopback by default; the command above opts into 0.0.0.0
+     deliberately. Put it behind authentication - the graph describes private source."
+  - "No secret is required for the local pipeline. Mapping, querying and the 3D
+     viewer all work with no API key and no network."

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orgono — Codebase Cartographer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%97%BA%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage"></div>
+
+<div id="hud" class="panel">
+  <header>
+    <h1>orgono</h1>
+    <span id="repo-name" class="muted"></span>
+  </header>
+
+  <div class="row">
+    <input id="search" type="search" placeholder="Search symbols…  (/)" autocomplete="off" spellcheck="false">
+  </div>
+  <div id="results" class="results" hidden></div>
+
+  <section>
+    <h2>Focus</h2>
+    <div id="focus-info" class="muted small">Click a node to trace its impact.</div>
+    <div class="row slider-row">
+      <label for="depth">Depth</label>
+      <input id="depth" type="range" min="1" max="5" value="2">
+      <output id="depth-out">2</output>
+    </div>
+    <div class="row">
+      <button id="clear-focus" class="btn">Clear focus</button>
+      <button id="isolate" class="btn">Isolate</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Edges</h2>
+    <div id="edge-toggles" class="toggles"></div>
+  </section>
+
+  <section>
+    <h2>Nodes</h2>
+    <div id="kind-toggles" class="toggles"></div>
+  </section>
+
+  <section>
+    <h2>Layout</h2>
+    <div class="row">
+      <button id="reheat" class="btn">Re-heat</button>
+      <button id="pause" class="btn">Pause</button>
+      <button id="reset-cam" class="btn">Reset view</button>
+    </div>
+    <div class="row slider-row">
+      <label for="repulsion">Spread</label>
+      <input id="repulsion" type="range" min="20" max="400" value="140">
+    </div>
+    <div class="row slider-row">
+      <label for="linkdist">Link</label>
+      <input id="linkdist" type="range" min="10" max="200" value="45">
+    </div>
+  </section>
+
+  <footer>
+    <div id="stats" class="small muted"></div>
+  </footer>
+</div>
+
+<div id="tooltip" class="tooltip" hidden></div>
+<div id="legend" class="legend panel"></div>
+<div id="loading" class="loading">building the map…</div>
+<div id="help" class="help small muted">
+  drag orbit · right-drag pan · scroll zoom · click focus · <kbd>f</kbd> frame · <kbd>esc</kbd> clear
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

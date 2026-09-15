@@ -1,0 +1,4 @@
+spec_version: 0.1.0
+name: orgono
+version: 0.1.0
+description: Deterministic codebase cartographer that maps a repository's AST into a queryable knowledge graph and answers impact-analysis questions for sibling agents.
